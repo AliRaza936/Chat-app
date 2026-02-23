@@ -26,6 +26,8 @@ export interface ChatLastMessage {
   text: string;
   sender: string;
   createdAt: string;
+  readBy:String[]
+
 }
 
 export interface Chat {
@@ -33,5 +35,10 @@ export interface Chat {
   participants: MessageSender;
   lastMessage: ChatLastMessage | null;
   lastMessageAt: string;
+
   createdAt: string;
+}
+export interface AuthCallbackResponse {
+  user: User;   
+  token: string;
 }

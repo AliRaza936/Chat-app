@@ -1,51 +1,22 @@
+// libs/axios.ts
 import axios from "axios";
-import * as Sentry from "@sentry/react-native";
-import { useAuth } from "@clerk/clerk-expo";
-import { useCallback } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
- // const API_URL = "http://localhost:3000/api"
-const API_URL = "http://192.168.100.90:3000/api"
-
-// this is the same thing we did with useEffect setup but it's optimized version - it's better!!
+const API_URL = "http://192.168.100.90:3000/api";
 
 const api = axios.create({
   baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
 });
 
-// Response interceptor registered once
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response) {
-      Sentry.logger.error(
-        Sentry.logger
-          .fmt`API request failed: ${error.config?.method?.toUpperCase()} ${error.config?.url}`,
-        { status: error.response.status, endpoint: error.config?.url, method: error.config?.method }
-      );
-    } else if (error.request) {
-      Sentry.logger.warn("API request failed - no response", {
-        endpoint: error.config?.url,
-        method: error.config?.method,
-      });
-    }
-    return Promise.reject(error);
-  }
-);
-
 export const useAPi = () => {
-  const { getToken } = useAuth();
-
-  const apiWithAuth = useCallback(
-    async <T>(config: Parameters<typeof api.request>[0]) => {
-      const token = await getToken();
-      return api.request<T>({
-        ...config,
-        headers: { ...config.headers, ...(token && { Authorization: `Bearer ${token}` }) },
-      });
-    },
-    [getToken]
-  );
+  const apiWithAuth = async <T>(config: Parameters<typeof api.request>[0]) => {
+    const token = await AsyncStorage.getItem("token"); 
+    return api.request<T>({
+      ...config,
+      headers: { ...config.headers, ...(token && { Authorization: `Bearer ${token}` }) },
+    });
+  };
 
   return { api, apiWithAuth };
 };

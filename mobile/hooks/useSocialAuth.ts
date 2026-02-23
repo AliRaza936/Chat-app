@@ -1,59 +1,31 @@
-import { useSSO } from "@clerk/clerk-expo";
-import { useState } from "react";
-import { Alert } from "react-native";
 
-function useAuthSocial(){
-const [loadingStrategy, setLoadingStrategy] = useState<string | null>(null)
-const { startSSOFlow } = useSSO()
-
-const handleSocialAuth = async (strategy:'oauth_google'| 'oauth_apple')=>{
-    if(loadingStrategy) return;
-    setLoadingStrategy(strategy)
-try {
-    const {createdSessionId,setActive} = await startSSOFlow({strategy})
-    if(!createdSessionId || !setActive){
-         const provider = strategy==="oauth_google" ? "Google" : "Apple"
-          Alert.alert('Sign-in incomplete',` ${provider} sign-in did not complete. Please try again.`)
-          return
-        }
-        setActive({session: createdSessionId})
-        
-} catch (error) {
-    console.log('💥Error in socali auth',error)
-    const provider = strategy==="oauth_google" ? "Google" : "Apple"
-    Alert.alert('Error',`Failed to sign in with ${provider}. Please try again.`)
-} finally{
-    setLoadingStrategy(null)
-}
-}
-return {handleSocialAuth,loadingStrategy}
-}
-
-export default useAuthSocial
-
-// import { useSSO } from "@clerk/clerk-expo";
-// import { router } from "expo-router";
+// import * as AuthSession from "expo-auth-session";
 // import { useState } from "react";
 // import { Alert } from "react-native";
 
-// type RedirectRoute = "/(tabs)" | "/(auth)" | "/"; 
 // function useAuthSocial() {
 //   const [loadingStrategy, setLoadingStrategy] = useState<string | null>(null);
 //   const { startSSOFlow } = useSSO();
 
 //   const handleSocialAuth = async (
-//     strategy: "oauth_google" | "oauth_apple",
-//     redirectRoute: RedirectRoute = "/(tabs)"
+//     strategy: "oauth_google" | "oauth_apple"
 //   ) => {
+//     if (loadingStrategy) return;
 
-//     if (loadingStrategy) return; 
 //     setLoadingStrategy(strategy);
 
 //     try {
-//       const { createdSessionId, setActive } = await startSSOFlow({ strategy });
+     
+
+//       const { createdSessionId, setActive } = await startSSOFlow({
+//         strategy,
+
+//       });
 
 //       if (!createdSessionId || !setActive) {
-//         const provider = strategy === "oauth_google" ? "Google" : "Apple";
+//         const provider =
+//           strategy === "oauth_google" ? "Google" : "Apple";
+
 //         Alert.alert(
 //           "Sign-in incomplete",
 //           `${provider} sign-in did not complete. Please try again.`
@@ -61,14 +33,14 @@ export default useAuthSocial
 //         return;
 //       }
 
+//       await setActive({ session: createdSessionId });
 
-//       let result = await setActive({ session: createdSessionId });
-
-// console.log(result,"authhhhhhh")
-//       router.replace(redirectRoute); 
 //     } catch (error) {
 //       console.log("💥 Error in social auth", error);
-//       const provider = strategy === "oauth_google" ? "Google" : "Apple";
+
+//       const provider =
+//         strategy === "oauth_google" ? "Google" : "Apple";
+
 //       Alert.alert(
 //         "Error",
 //         `Failed to sign in with ${provider}. Please try again.`
@@ -82,3 +54,56 @@ export default useAuthSocial
 // }
 
 // export default useAuthSocial;
+
+
+// // import { useSSO } from "@clerk/clerk-expo";
+// // import { router } from "expo-router";
+// // import { useState } from "react";
+// // import { Alert } from "react-native";
+
+// // type RedirectRoute = "/(tabs)" | "/(auth)" | "/"; 
+// // function useAuthSocial() {
+// //   const [loadingStrategy, setLoadingStrategy] = useState<string | null>(null);
+// //   const { startSSOFlow } = useSSO();
+
+// //   const handleSocialAuth = async (
+// //     strategy: "oauth_google" | "oauth_apple",
+// //     redirectRoute: RedirectRoute = "/(tabs)"
+// //   ) => {
+
+// //     if (loadingStrategy) return; 
+// //     setLoadingStrategy(strategy);
+
+// //     try {
+// //       const { createdSessionId, setActive } = await startSSOFlow({ strategy });
+
+// //       if (!createdSessionId || !setActive) {
+// //         const provider = strategy === "oauth_google" ? "Google" : "Apple";
+// //         Alert.alert(
+// //           "Sign-in incomplete",
+// //           `${provider} sign-in did not complete. Please try again.`
+// //         );
+// //         return;
+// //       }
+
+
+// //       let result = await setActive({ session: createdSessionId });
+
+// // console.log(result,"authhhhhhh")
+// //       router.replace(redirectRoute); 
+// //     } catch (error) {
+// //       console.log("💥 Error in social auth", error);
+// //       const provider = strategy === "oauth_google" ? "Google" : "Apple";
+// //       Alert.alert(
+// //         "Error",
+// //         `Failed to sign in with ${provider}. Please try again.`
+// //       );
+// //     } finally {
+// //       setLoadingStrategy(null);
+// //     }
+// //   };
+
+// //   return { handleSocialAuth, loadingStrategy };
+// // }
+
+// // export default useAuthSocial;

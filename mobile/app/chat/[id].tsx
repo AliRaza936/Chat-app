@@ -11,6 +11,7 @@ import { Image } from "expo-image";
 import EmptyUi from "@/components/EmptyUi";
 import { MessageSender } from "@/types";
 import MessageBubble from "@/components/MessageBubble";
+import { ChatInputWrapper } from "@/components/ChatInputWrapper";
 
 type ChatParams = {
   id: string;
@@ -151,11 +152,16 @@ const ChatDetailsScreen = () => {
 
               {/* Message + Keyboard input */}
 
-              <KeyboardAvoidingView className="flex-1"
-              behavior={Platform.OS === "ios" ? 'padding' : 'height'}
-              keyboardVerticalOffset={0}
+              {/* <KeyboardAvoidingView className="flex-1"
+              behavior='padding'
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
 
-              >
+              > */}
+                <ChatInputWrapper
+                onKeyboardShow={() => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  }}
+                >
                 <View className="flex-1 bg-surface ">
                   {isLoading ? (
                     <View className="flex-1 items-center justify-center">
@@ -172,7 +178,7 @@ const ChatDetailsScreen = () => {
                   ):
                  <ScrollView
                  ref={scrollViewRef}
-                 contentContainerStyle={{paddingHorizontal:16,paddingVertical:12,gap:8}}
+                 contentContainerStyle={{paddingHorizontal:16,paddingVertical:12,gap:15}}
                  onContentSizeChange={()=>{
                   scrollViewRef.current?.scrollToEnd({animated:true})
                  }}
@@ -217,8 +223,8 @@ const ChatDetailsScreen = () => {
 
                   </View>
                 </View>
-
-              </KeyboardAvoidingView>
+</ChatInputWrapper>
+              {/* </KeyboardAvoidingView> */}
     </SafeAreaView>
   );
 };

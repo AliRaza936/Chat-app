@@ -24,7 +24,6 @@ const NewChatScreen = () => {
   const handleUserSelect = (user:User)=>{
     getOrCreateChat(user?._id,{
       onSuccess:(chat)=>{
-        console.log(chat)
         router.dismiss()
          setTimeout(() => {
            router.push({
@@ -82,39 +81,48 @@ const NewChatScreen = () => {
               </View>
             </View>
 
-            <View className='flex-1 bg-surface'>
-              {isCreatingChat || isLoading ? (
-                <View className='flex-1 items-center justify-center'>
-                  <ActivityIndicator size={'large'} color={'#F4A261'}/>
-                </View>
-              ): !users ||  users.length === 0 ?(
-                <View className='flex-1 items-center justify-center px-5'>
-                    <Ionicons name="person-outline"  size={64} color={'#686870'}/>
-                    <Text className='text-muted-foreground text-lg mt-4'>
-                      No users found
-                    </Text>
-                    <Text className='text-subtle-foreground text-sm mt-1 text-center'>
-                      Try a different search term
-                    </Text>
-                </View>
-              ):(
-                <ScrollView
-                className='flex-1 px-5 pt-4'
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{paddingBottom:24}}
-                >
-                  <Text className='text-muted-foreground text-sm mb-3'>USERS</Text>
-                  {users?.map((user)=>(
-                   <UserItems
-                   key={user._id}
-                   user={user}
-                   isOnline={onlineUsers.has(user._id)}
-                   onPress = {()=>handleUserSelect(user)}
-                   />
-                  ))}
-                </ScrollView>
-              )}
-            </View>
+           <View className="flex-1 bg-surface">
+  {isCreatingChat || isLoading ? (
+    <View className="flex-1 items-center justify-center">
+      <ActivityIndicator size={'large'} color={'#F4A261'} />
+    </View>
+  ) : searchQuery.trim() === '' ? (
+    // Nothing shown until user types
+    <View className="flex-1 items-center justify-center px-5">
+      <Text className="text-subtle-foreground text-sm text-center">
+        Start typing to search for a user
+      </Text>
+    </View>
+  ) : users?.length === 0 ? (
+    // User typed something but no matches
+    <View className="flex-1 items-center justify-center px-5">
+      <Ionicons name="person-outline" size={64} color={'#686870'} />
+      <Text className="text-muted-foreground text-lg mt-4">
+        No users found
+      </Text>
+      <Text className="text-subtle-foreground text-sm mt-1 text-center">
+        Try a different search term
+      </Text>
+    </View>
+  ) : (
+    // Users found
+    <ScrollView
+      className="flex-1 px-5 pt-4"
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: 24 }}
+    >
+      <Text className="text-muted-foreground text-sm mb-3">SEARCH RESULTS</Text>
+      {users?.map((user) => (
+        <UserItems
+          key={user._id}
+          user={user}
+          isOnline={onlineUsers.has(user._id)}
+          onPress={() => handleUserSelect(user)}
+        />
+      ))}
+    </ScrollView>
+  )}
+</View>
         </View>
      </View>
     </SafeAreaView>

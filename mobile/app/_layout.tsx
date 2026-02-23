@@ -1,68 +1,95 @@
-import { Stack } from "expo-router";
-import "../global.css"
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  QueryClient,
-  QueryClientProvider,
-} from '@tanstack/react-query'
-import { ClerkProvider } from '@clerk/clerk-expo'
-import { tokenCache } from '@clerk/clerk-expo/token-cache'
-import AuthSync from "@/components/AuthSync";
-
+import { Stack, useRouter } from "expo-router";
+import "../global.css";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from "expo-status-bar";
 import * as Sentry from '@sentry/react-native';
-import { View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import SocketConnection from "@/components/SocketConnection";
+import { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios"
+import AppSplash from "@/components/AppSplash";
 
-Sentry.init({
-  dsn: 'https://d491c1b469cbf9d67d7bebeb2fa3c370@o4510878132469760.ingest.de.sentry.io/4510878140923984',
+const queryClient = new QueryClient();
+const API_URL = "http://192.168.100.90:3000";
+export default (function RootLayout() {
+  const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null);
+  const [serverReady, setServerReady] = useState(false);
 
-  // Adds more context data to events (IP address, cookies, user, etc.)
-  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
-  sendDefaultPii: true,
+  const router = useRouter();
 
-  // Enable Logs
-  enableLogs: true,
+  // ✅ auth check
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        setIsSignedIn(!!token);
+      } catch {
+        setIsSignedIn(false);
+      }
+    };
+    checkAuth();
+  }, []);
 
-  // Configure Session Replay
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1,
-  integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration(),
+  // ✅ server health check
+  useEffect(() => {
+    const isServerConnect = async () => {
+      try {
+        const result = await axios.get(`${API_URL}/health`);
+        if (result?.data?.status === "ok") {
+          setServerReady(true);
+        }
+      } catch (e) {
+        console.log(API_URL,'asdas')
+        console.log(e);
+        setServerReady(false);
+      }
+    };
 
-    Sentry.reactNativeTracingIntegration({
-      traceFetch:true,
-      traceXHR:true,
-      enableHTTPTimings:true
-    })
-  ],
+    isServerConnect();
+  }, []);
 
-  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
-  // spotlight: __DEV__,
-});
+  // ✅ navigation
+  useEffect(() => {
+    if (!serverReady) return; // wait server
 
-const queryClient = new QueryClient()
-export default Sentry.wrap(function RootLayout() {
+    if (isSignedIn === true) {
+      router.replace("/(tabs)");
+    } else if (isSignedIn === false) {
+      router.replace("/(auth)");
+    }
+  }, [isSignedIn, serverReady]);
+
+  // ✅ splash loader until BOTH ready
+ if (isSignedIn === null || !serverReady) {
+  const message =
+    isSignedIn === null
+      ? "Checking authentication..."
+      : "Connecting to server, please wait...";
+
+  return <AppSplash message={message} />;
+}
+
   return (
-    <View style={{ flex: 1, backgroundColor: "#0D0D0F" }}>
+    <QueryClientProvider client={queryClient}>
+      <SocketConnection />
+      <StatusBar style="light" />
 
-     <ClerkProvider tokenCache={tokenCache} >
-      <QueryClientProvider client={queryClient}>
-        <AuthSync/>
-        <SocketConnection/>
-        <StatusBar style="light"/>
-      <Stack screenOptions={{headerShown:false,contentStyle:{backgroundColor:"#0D0D0F"}}}>
-        <Stack.Screen name="(auth)" options={{animation:'fade'}}/>
-        <Stack.Screen name="(tabs)" options={{animation:'fade'}}/>
-        <Stack.Screen name="new-chat" options={{animation:'slide_from_bottom',
-          presentation:'modal',
-          gestureEnabled:true,
-        }}/>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: "#0D0D0F" },
+        }}
+      >
+        <Stack.Screen
+          name="new-chat"
+          options={{
+            animation: "slide_from_bottom",
+            presentation: "modal",
+            gestureEnabled: true,
+          }}
+        />
       </Stack>
     </QueryClientProvider>
-     </ClerkProvider>
-    </View>
-    
   );
 });

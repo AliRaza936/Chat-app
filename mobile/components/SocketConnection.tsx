@@ -1,22 +1,35 @@
-import { View, Text } from 'react-native'
-import React, { useEffect } from 'react'
-import { useAuth } from '@clerk/clerk-expo'
-import { useQueryClient } from '@tanstack/react-query'
-import { useSocketStore } from '@/libs/socket'
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSocketStore } from "@/libs/socket";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SocketConnection = () => {
-    const {getToken ,isSignedIn} = useAuth()
-    const queryClient = useQueryClient()
-    const connect = useSocketStore((state)=>state.connect)
-    const disconnect = useSocketStore((state)=>state.disconnect)
-    useEffect(()=>{
-        if(isSignedIn){
-            getToken().then((token)=>{
-                if(token) connect(token,queryClient)
-            })
-        }else{ disconnect}
-    },[isSignedIn, connect,disconnect, getToken, queryClient])
-  return null
-}
+  const queryClient = useQueryClient();
+  const connect = useSocketStore((state) => state.connect);
+  const disconnect = useSocketStore((state) => state.disconnect);
 
-export default SocketConnection
+useEffect(() => {
+  let isMounted = true;
+
+  const initSocket = async () => {
+    const token = await AsyncStorage.getItem("token");
+
+    if (token && isMounted) {
+      connect(token, queryClient);
+    } else if (isMounted) {
+      disconnect();
+    }
+  };
+
+  initSocket();
+
+  return () => {
+    isMounted = false;
+    disconnect();
+  };
+}, [connect, disconnect, queryClient]);
+
+  return null; 
+};
+
+export default SocketConnection;

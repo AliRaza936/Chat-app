@@ -1,46 +1,51 @@
 import { View, Text, ScrollView, Pressable } from 'react-native'
 import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useAuth, useUser } from '@clerk/clerk-expo'
+
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSocketStore } from '@/libs/socket';
+import { useCurrentUser } from '@/hooks/useAuth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 
-const MENU_SECTIONS = [
-  {
-    title: "Account",
-    items: [
-      { icon: "person-outline", label: "Edit Profile", color: "#F4A261" },
-      { icon: "shield-checkmark-outline", label: "Privacy & Security", color: "#10B981" },
-      { icon: "notifications-outline", label: "Notifications", value: "On", color: "#8B5CF6" },
-    ],
-  },
-  {
-    title: "Preferences",
-    items: [
-      { icon: "moon-outline", label: "Dark Mode", value: "On", color: "#6366F1" },
-      { icon: "language-outline", label: "Language", value: "English", color: "#EC4899" },
-      { icon: "cloud-outline", label: "Data & Storage", value: "1.2 GB", color: "#14B8A6" },
-    ],
-  },
-  {
-    title: "Support",
-    items: [
-      { icon: "help-circle-outline", label: "Help Center", color: "#F59E0B" },
-      { icon: "chatbubble-outline", label: "Contact Us", color: "#3B82F6" },
-      { icon: "star-outline", label: "Rate the App", color: "#F4A261" },
-    ],
-  },
-];
+// const MENU_SECTIONS = [
+//   {
+//     title: "Account",
+//     items: [
+//       { icon: "person-outline", label: "Edit Profile", color: "#F4A261" },
+//       { icon: "shield-checkmark-outline", label: "Privacy & Security", color: "#10B981" },
+//       { icon: "notifications-outline", label: "Notifications", value: "On", color: "#8B5CF6" },
+//     ],
+//   },
+//   {
+//     title: "Preferences",
+//     items: [
+//       { icon: "moon-outline", label: "Dark Mode", value: "On", color: "#6366F1" },
+//       { icon: "language-outline", label: "Language", value: "English", color: "#EC4899" },
+//       { icon: "cloud-outline", label: "Data & Storage", value: "1.2 GB", color: "#14B8A6" },
+//     ],
+//   },
+//   {
+//     title: "Support",
+//     items: [
+//       { icon: "help-circle-outline", label: "Help Center", color: "#F59E0B" },
+//       { icon: "chatbubble-outline", label: "Contact Us", color: "#3B82F6" },
+//       { icon: "star-outline", label: "Rate the App", color: "#F4A261" },
+//     ],
+//   },
+// ];
 const Profile = () => {
-  const {signOut} = useAuth()
-  const {user} = useUser()
+
   const { disconnect } = useSocketStore.getState()
 
 const handleLogout = async () => {
-   disconnect()   // 🔥 VERY IMPORTANT
-   await signOut()
+   disconnect()  
+   await AsyncStorage.removeItem('token')
+   router.replace('/(auth)')
+ 
 }
+const {data:user} = useCurrentUser()
 
   return (
       <SafeAreaView className='bg-surface-dark flex-1'>
@@ -52,18 +57,18 @@ const handleLogout = async () => {
               <View className='items-center mt-10'>
             <View className='relative'>
                 <View className='rounded-full border-2 border-primary'>
-                  <Image source={user?.imageUrl} style={{width:100,height:100,borderRadius:999}}/>
+                  <Image source={user?.avatar} style={{width:100,height:100,borderRadius:999}}/>
                 </View>
-                    <Pressable className='absolute bottom-1 right-1 w-8 h-8 bg-primary rounded-full items-center justify-center border-2 border-surface-dark'>
+                    {/* <Pressable className='absolute bottom-1 right-1 w-8 h-8 bg-primary rounded-full items-center justify-center border-2 border-surface-dark'>
                       <Ionicons name='camera' size={16} color={'#0D0D0F'}/>
-                    </Pressable>
+                    </Pressable> */}
               </View>
 
               <Text className='text-2xl font-bold text-foreground mt-4'>
-                {user?.firstName} {user?.lastName}
+                {user?.name}
               </Text>
               <Text className=' text-muted-foreground mt-1'>
-                {user?.emailAddresses[0]?.emailAddress}
+                {user?.email}
               </Text>
 
               <View className="flex-row items-center mt-3 bg-green-500/20 px-3 py-1.5 rounded-full">
@@ -75,7 +80,7 @@ const handleLogout = async () => {
           </View>
 
             {/* MENU SECTIONS */}
-      {MENU_SECTIONS.map((section) => (
+      {/* {MENU_SECTIONS.map((section) => (
         <View key={section.title} className="mt-6 mx-5">
           <Text className="text-subtle-foreground text-xs font-semibold uppercase tracking-wider mb-2 ml-1">
             {section.title}
@@ -103,7 +108,7 @@ const handleLogout = async () => {
             ))}
           </View>
         </View>
-      ))}
+      ))} */}
 
       {/* Logout Button */}
       <Pressable

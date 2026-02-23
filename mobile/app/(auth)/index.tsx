@@ -6,22 +6,77 @@ import {
   Pressable,
   ActivityIndicator,
 } from "react-native";
-import React from "react";
+import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import logo from "../../assets/images/logo.png";
-import auth from "../../assets/images/auth.png";
+import authy from "../../assets/images/auth.png";
 import google from "../../assets/images/google.png";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
-import useAuthSocial from "@/hooks/useSocialAuth";
+// import useAuthSocial from "@/hooks/useSocialAuth";
 import { LinearGradient } from 'expo-linear-gradient';
 import { AnimatedOrb } from "@/components/AnimatedOrb";
 import {BlurView} from "expo-blur"
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {GoogleSignin,User,isSuccessResponse} from "@react-native-google-signin/google-signin"
+import { useAuthCallback } from "@/hooks/useAuth";
+import { router } from "expo-router";
+import { useSocketStore } from "@/libs/socket";
+import { useQueryClient } from "@tanstack/react-query";
+GoogleSignin.configure({
+  webClientId:"538860614614-1763ks73cb62bbb1uf2i3pefm0hm1r6p.apps.googleusercontent.com",
+  iosClientId:'538860614614-r6l9mpa0f2he7993htsu0qf8me51tb8u.apps.googleusercontent.com',
+  offlineAccess:true
+})
 const { width, height } = Dimensions.get("window");
 const AuthScreen = () => {
-  const { handleSocialAuth, loadingStrategy } = useAuthSocial();
-  const isLoading = loadingStrategy !== null;
+  // const { handleSocialAuth, loadingStrategy } = useAuthSocial();
+  // const isLoading = loadingStrategy !== null;
+  const [auth,setAuht] = useState<User | null>(null)
+const [loading,setLoading] = useState(false)
+const { mutate: syncUser } = useAuthCallback();
+const queryClient = useQueryClient();
+ const {
+    connect,
+   
+  } = useSocketStore();
+async function handleGoogleSignIn() {
+  try {
+    setLoading(true);
+    await GoogleSignin.hasPlayServices();
+    await GoogleSignin.signOut();
+
+    const response = await GoogleSignin.signIn();
+
+
+    if (!isSuccessResponse(response)) return;
+
+
+setAuht(response.data)
+   const { idToken } = await GoogleSignin.getTokens();
+
+    // Use your callback API
+    syncUser(idToken, {
+      onSuccess: async (data) => {
+        // store the JWT
+        await AsyncStorage.setItem("token", data.token);
+        await AsyncStorage.setItem('userId',data.user._id)
+        connect(data.token,queryClient)
+
+        console.log("✅ JWT stored:", data.token);
+        console.log("✅ id:", data.user._id);
+        router.push("/(tabs)")
+      },
+      onError: (error) => {
+        console.log("❌ Backend callback failed:", error);
+      },
+    });
+  } catch (err) {
+    console.log("Google Sign-In error:", err);
+  } finally {
+    setLoading(false);
+  }
+}
   return (
     <View className="bg-surface-dark  flex-1">
       <View className="absolute inset-0 overflow-hidden">
@@ -82,7 +137,7 @@ const AuthScreen = () => {
 
           <View className="flex-1 justify-center items-center px-6">
             <Image
-              source={auth}
+              source={authy}
               style={{ width: width - 48, height: height * 0.3 }}
               contentFit="contain"
             />
@@ -92,19 +147,20 @@ const AuthScreen = () => {
                 Connect & Chat
               </Text>
               <Text className="text-3xl font-bold text-primary text-center font-serif ">
-                Seamlessly
+                Seamlessly 
+                
               </Text>
             </View>
 
             <View className="flex-col gap-4 w-full mt-10">
               <Pressable
                 className="flex-row items-center justify-center gap-2 bg-white/95 py-4 rounded-2xl active:scale-[0.97]"
-                disabled={isLoading}
+                // disabled={isLoading}
                 accessibilityRole="button"
                 accessibilityLabel="Continue with Google"
-                onPress={() => !isLoading && handleSocialAuth("oauth_google")}
+                onPress={() =>  handleGoogleSignIn()}
               >
-                {loadingStrategy === "oauth_google" ? (
+                {loading === true ? (
                   <ActivityIndicator size="small" color="#1a1a1a" />
                 ) : (
                   <>

@@ -1,18 +1,73 @@
 import { View, Text, ScrollView, Button, ActivityIndicator, FlatList, Pressable } from 'react-native'
-import React from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Sentry from '@sentry/react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useChats } from '@/hooks/useChats';
 import { Ionicons } from '@expo/vector-icons';
 import ChatItem from '@/components/ChatItem';
 import EmptyUi from '@/components/EmptyUi';
 import { Chat } from '@/types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { useSocketStore } from '@/libs/socket';
 
 const ChatTab = () => {
   const router = useRouter()
-  const {data:chats,isLoading,error,refetch} = useChats()
+  const {data:chats,isLoading,error,refetch} = useChats({subscribeToUpdates:true})
+  const {initUnreadChats} = useSocketStore()
+//  useFocusEffect(
+//     useCallback(() => {
+//       refetch();
+//     }, [])
+  // );
+ const [userId, setUserId] = useState<string | null>(null)
+ 
+   // Fetch userId only once d
+ useEffect(() => {
+  const fetchUserId = async () => {
+    const id = await AsyncStorage.getItem('userId');
+    if (!id || !chats) return;
 
+    console.log("Current userId:", id);
+    setUserId(id);
+
+    // Filter unread chats
+    const initChats = chats.filter(chat => {
+      const lastMessage = chat.lastMessage;
+      if (!lastMessage) return false; // skip chats with no messages
+
+      // Only consider messages from other users
+      if (lastMessage.sender === id) return false;
+
+      const readBy = lastMessage.readBy || []; // default to empty array if undefined
+      return readBy.length === 0; // unread if nobody has read it yet
+    });
+
+    console.log("Unread chats:", initChats);
+    initUnreadChats(initChats, id);
+  };
+
+  fetchUserId();
+}, [chats]);
+
+// Sorted chats
+const sortedChats = useMemo(() => {
+  if (!chats || !userId) return [];
+  return [...chats].sort((a, b) => {
+    const aUnread = a.lastMessage ? !a.lastMessage.readBy?.includes(userId) : false;
+    const bUnread = b.lastMessage ? !b.lastMessage.readBy?.includes(userId) : false;
+
+    // 1️⃣ unread messages first
+    if (aUnread && !bUnread) return -1;
+    if (!aUnread && bUnread) return 1;
+
+    // 2️⃣ sort by last message timestamp (newest first)
+    const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+    const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+    return bTime - aTime;
+  });
+}, [chats, userId]);
   if(isLoading){
     return(
       <View className='flex-1 bg-surface items-center justify-center'>
@@ -48,10 +103,10 @@ const ChatTab = () => {
 
     <SafeAreaView className='bg-surface flex-1'>
       <FlatList
-      data={chats}
+      data={sortedChats}
       keyExtractor={(item)=>item._id}
 
-      renderItem={({item})=><ChatItem chat={item} onPress={()=>handleChatPress(item)}/> }
+      renderItem={({item})=><ChatItem chat={item} chatId={item._id} onPress={()=>handleChatPress(item)}/> }
       showsVerticalScrollIndicator={false}
       contentInsetAdjustmentBehavior='automatic'
       contentContainerStyle={{paddingHorizontal:20,paddingTop:16,paddingBottom:24}}

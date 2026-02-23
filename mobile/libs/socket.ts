@@ -2,6 +2,8 @@ import {create} from 'zustand'
 import {Socket,io} from "socket.io-client"
 import { Query, QueryClient } from '@tanstack/react-query'
 import { Chat, Message, MessageSender } from '@/types'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { useId } from 'react'
 
 const SOCKET_URL =  "http://192.168.100.90:3000"
 interface SocketState{
@@ -12,10 +14,12 @@ interface SocketState{
     unReadChats:Set<string>
     currentChatId:string | null
     queryClient: QueryClient | null
+    userId: string | null;
 
     connect : (token:string,queryClient:QueryClient)=>void
     disconnect:()=>void
     joinChat:(chatId:string)=>void
+    initUnreadChats:(chats:Chat[],id:string)=>void
     leaveChat:(chatId:string)=>void
     sendMessage:(chatId:string,text:string,currentUser:MessageSender)=>void
     sendTyping:(chatId:string,isTyping:boolean)=>void
@@ -29,12 +33,17 @@ export const useSocketStore = create<SocketState>((set,get)=>({
    unReadChats:new Set(),
    currentChatId:null,
    queryClient:null,
+   userId: null,
 
    connect:(token,queryClient)=>{
     const existingSocket = get().socket
     if(existingSocket?.connected) return
 
-    if(existingSocket) existingSocket.disconnect()
+    if (existingSocket) {
+    existingSocket.removeAllListeners();
+    existingSocket.disconnect();
+  }
+
 
     const socket = io(SOCKET_URL,{auth:{token}})
 
@@ -68,55 +77,117 @@ export const useSocketStore = create<SocketState>((set,get)=>({
     socket.on('socket-error',(error:{message:string})=>{
         console.error("Socket error:", error.message)
     })
+socket.on('chat-read-updated', (updatedChat: Chat) => {
+  const { queryClient, currentChatId, userId } = get();
+  if (!queryClient || !userId) return;
 
-    socket.on('new-message',(message:Message)=>{
-        const senderId = (message.sender as MessageSender)._id
-        const {currentChatId} =  get()
+  // Update chats cache
+  queryClient.setQueryData<Chat[]>(['chats'], (oldChats) => {
+    if (!oldChats) return oldChats;
 
-        queryClient.setQueryData<Message[]>(['messages',message.chat],(old)=>{
-        if(!old) return [message]
+   return oldChats.map(chat => {
+  if (chat._id === updatedChat._id) {
+    const { lastMessage } = updatedChat;
+    return {
+      ...chat,
+      lastMessage: {
+        ...chat.lastMessage,
+        readBy: lastMessage?.readBy ?? []
+      }
+    } as Chat;
+  }
+  return chat;
+});
+  });
 
-        const filtered = old.filter((m)=>!m._id.startsWith("temp-"))
+  // Remove from unReadChats if current user has read
+  if (currentChatId === updatedChat._id) {
+    set((state) => {
+      const unReadChats = new Set(state.unReadChats);
+      unReadChats.delete(updatedChat._id);
+      return { unReadChats };
+    });
+  }
+});
+   socket.on('new-message', async (message: Message) => {
+  const senderId = (message.sender as MessageSender)._id;
+  const { currentChatId, queryClient } = get();
+  const userId = await AsyncStorage.getItem('userId') || '';
 
-        if(filtered.some((m)=>m._id === message._id)) return filtered
-        return [...filtered,message]
-        
-    })
+  if (!queryClient) return;
 
-    queryClient.setQueryData<Chat[]>(['chats'],(oldChats)=>{
-        return oldChats?.map((chat)=>{
-            if(chat._id === message.chat){
-                return{
-                    ...chat,
-                    lastMessage:{
-                        _id:message._id,
-                        text:message.text,
-                        sender:senderId,
-                        createdAt:message.createdAt,
-                    },
-                    lastMessageAt:message.createdAt
-                }
-            }
-            return chat
-        })
-    })
+  // 1️⃣ Update messages for this chat
+  queryClient.setQueryData<Message[]>(['messages', message.chat], (old) => {
+    if (!old) return [message];
+    const filtered = old.filter((m) => !m._id.startsWith("temp-"));
+    if (filtered.some((m) => m._id === message._id)) return filtered;
+    return [...filtered, message];
+  });
 
-    if(currentChatId !== message.chat){
-        const chats = queryClient.getQueryData<Chat[]>(['chats'])
-        const chat = chats?.find((c)=>c._id === message.chat)
-        if(chat?.participants && senderId === chat.participants._id){
-            set((state)=>({
-                unReadChats: new Set ([...state.unReadChats,message.chat])
-            }))
-        }
+  // 2️⃣ Update chats cache
+  queryClient.setQueryData<Chat[]>(['chats'], (oldChats) => {
+    if (!oldChats) return [];
+
+    const senderUser: MessageSender =
+      typeof message.sender === "string"
+        ? { _id: message.sender } as MessageSender
+        : message.sender;
+
+    const exists = oldChats.some((c) => c._id === message.chat);
+
+    if (!exists) {
+      // Insert new chat at top
+      const newChat: Chat = {
+        _id: message.chat,
+        participants: senderUser,
+        lastMessage: {
+          _id: message._id,
+          text: message.text,
+          sender: senderId,
+          createdAt: message.createdAt,
+          readBy: [], // ✅ include readBy
+        },
+        lastMessageAt: message.createdAt,
+        createdAt: message.createdAt,
+      };
+      return [newChat, ...oldChats];
     }
 
-    set((state)=>{
-        const typingUsers = new Map(state.typingUsers)
-        typingUsers.delete(message.chat)
-        return {typingUsers:typingUsers}
-    })
-    })
+    // Update existing chat
+    return oldChats.map((chat) => {
+      if (chat._id === message.chat) {
+        return {
+          ...chat,
+          lastMessage: {
+            _id: message._id,
+            text: message.text,
+            sender: senderId,
+            createdAt: message.createdAt,
+            readBy: chat.lastMessage?.readBy || [], // ✅ include readBy
+          },
+          lastMessageAt: message.createdAt,
+        };
+      }
+      return chat;
+    });
+  });
+
+  // 3️⃣ Handle unReadChats in Zustand
+
+
+if (senderId !== userId && currentChatId !== message.chat) {
+  set((state) => ({
+    unReadChats: new Set([...state.unReadChats, message.chat]),
+  }));
+}
+
+  // 4️⃣ Remove typing if user sent a message
+  set((state) => {
+    const typingUsers = new Map(state.typingUsers);
+    typingUsers.delete(message.chat);
+    return { typingUsers };
+  });
+});
 
     socket.on('typing',({userId,chatId,isTyping}:{userId:string,chatId:string,isTyping:boolean})=>{
         set((state)=>{
@@ -133,6 +204,7 @@ export const useSocketStore = create<SocketState>((set,get)=>({
    disconnect:()=>{
     const socket = get().socket
     if(socket){
+        socket.removeAllListeners();
         socket.disconnect()
         set({
               socket:null,
@@ -204,5 +276,12 @@ export const useSocketStore = create<SocketState>((set,get)=>({
         socket.emit('typing',{chatId,isTyping})
     }
    },
+   initUnreadChats: (chats: Chat[], userId: string) => {
+
+  const unreadIds = chats.map(c => c._id);
+
+  set({ unReadChats: new Set(unreadIds) })
+},
+   
 
 }))

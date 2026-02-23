@@ -1,44 +1,35 @@
-import { useAuthCallback } from "@/hooks/useAuth";
-import { useAuth, useUser } from "@clerk/clerk-expo";
-import { useEffect, useRef } from "react";
-import * as Sentry from '@sentry/react-native';
-import { useSocketStore } from "@/libs/socket";
+import { View, ActivityIndicator } from "react-native";
+import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Redirect } from "expo-router";
 
-const AuthSync = () => {
-  const { isSignedIn } = useAuth();
+export default function AuthSync() {
+//   const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null);
 
-  const { user } = useUser();
-  const { mutate: syncUser } = useAuthCallback();
-  const hasSync = useRef(false);
+//  useEffect(() => {
+//   const checkAuth = async () => {
+   
+//       const token = await AsyncStorage.getItem('token');
+//       if(token){
 
-  const {} = useSocketStore()
-    useEffect(()=>{
-        if(isSignedIn && user && !hasSync.current){
-            hasSync.current = true
-            syncUser(undefined,{
-                onSuccess:(data)=>{
-                    console.log("✅ User synced with backend:",data.name)
-                    Sentry.logger.info(Sentry.logger.fmt`User synced with backend: ${data.name}`,{
-                        userId:user.id,
-                        userName:data.name,
-                    })
-                },
-                onError:(error)=>{
-                    console.log("❌ User sync failed:",error.name)
-                    Sentry.logger.error(Sentry.logger.fmt`User sync failed with backend`,{
-                        userId:user.id,
-                        error:error instanceof Error ? error.message :String(error),
-                    })
-                },
-            })
-        }
-        if(!isSignedIn){
-            hasSync.current = false
-        }
-    },[isSignedIn,user,syncUser])
+//         setIsSignedIn(!!token);
+//       }else{
+//         setIsSignedIn(false);
 
+//       }
+  
+//   };
 
-  return null;
-};
+//   checkAuth();
+// }, []);
 
-export default AuthSync;
+//   if (isSignedIn === null) {
+//     return (
+//       <View style={{ flex:1, justifyContent:'center', alignItems:'center' }}>
+//         <ActivityIndicator size="large" color="#F4A261" />
+//       </View>
+//     );
+//   }
+
+//   return isSignedIn ? <Redirect href="/(tabs)" /> : <Redirect href="/(auth)" />;
+}
