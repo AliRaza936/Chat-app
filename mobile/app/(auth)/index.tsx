@@ -68,6 +68,7 @@ setAuht(response.data)
         router.push("/(tabs)")
       },
       onError: (error) => {
+
         console.log("❌ Backend callback failed:", error);
       },
     });

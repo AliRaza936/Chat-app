@@ -11,7 +11,7 @@ import axios from "axios"
 import AppSplash from "@/components/AppSplash";
 
 const queryClient = new QueryClient();
-const API_URL = "http://192.168.100.90:3000";
+const API_URL = "https://just-chat-gc9s.onrender.com";
 export default (function RootLayout() {
   const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null);
   const [serverReady, setServerReady] = useState(false);
@@ -37,6 +37,7 @@ export default (function RootLayout() {
       try {
         const result = await axios.get(`${API_URL}/health`);
         if (result?.data?.status === "ok") {
+          console.log(result.data)
           setServerReady(true);
         }
       } catch (e) {

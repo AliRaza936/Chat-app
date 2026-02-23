@@ -5,7 +5,7 @@ import { Chat, Message, MessageSender } from '@/types'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useId } from 'react'
 
-const SOCKET_URL =  "http://192.168.100.90:3000"
+const SOCKET_URL =  "https://just-chat-gc9s.onrender.com"
 interface SocketState{
     socket:Socket | null
     isConnected:boolean
