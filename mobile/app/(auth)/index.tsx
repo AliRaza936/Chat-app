@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Pressable,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -67,10 +68,12 @@ setAuht(response.data)
         console.log("✅ id:", data.user._id);
         router.push("/(tabs)")
       },
-      onError: (error) => {
+       onError: (error) => {
 
-        console.log("❌ Backend callback failed:", error);
-      },
+         console.log("❌ Backend callback failed:", error);
++        // Show user-facing error (e.g., using Alert or a toast library)
++        Alert.alert("Authentication Failed","Unable to complete sign-in. Please try again.",[{ text: "OK" }]);
+       },
     });
   } catch (err) {
     console.log("Google Sign-In error:", err);

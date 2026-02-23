@@ -4,7 +4,7 @@ import { verifyToken } from "@clerk/express";
 import { User } from "../models/User.ts";
 import { Message } from "../models/Message.ts";
 import { Chat } from "../models/Chat.ts";
-
+import jwt from "jsonwebtoken";
 
 // store online users in memory
 export const onlineUsers:Map <string,string> = new Map()
@@ -17,26 +17,25 @@ export const initailizeSocket = (httpServer: HttpServer) => {
     ];
     const io = new SocketServer(httpServer,{cors:{origin:allowedOrigins}});
 // verify socket connection if user is authenticated , and store userId in socket object
-    io.use(async(socket,next)=>{
-        const token = socket.handshake.auth.token;
-        
-        if(!token){
-            return next(new Error('Authentication error'));
-        }
-        try {
-            const session = await verifyToken(token,{secretKey:process.env.CLERK_SECRET_KEY as string});
-                const clerkId = session.sub;
-                const user = await User.findOne({clerkId}); 
-                if(!user){
-                    return next(new Error('User not found'));
-                }
-                socket.data.userId = user._id.toString();
-                next();
-        } catch (error:any) {
-            return next(new Error(error));
-        }
+    io.use(async (socket, next) => {
+  const token = socket.handshake.auth.token;
 
-    })
+  if (!token) return next(new Error("Authentication error"));
+
+  try {
+    const payload: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    const userId = payload.userId; 
+
+    const user = await User.findById(userId);
+    if (!user) return next(new Error("User not found"));
+
+    socket.data.userId = user._id.toString();
+    next();
+  } catch (err) {
+    return next(new Error("Invalid token"));
+  }
+});
 
     io.on('connection',(socket)=>{
 
@@ -52,8 +51,27 @@ export const initailizeSocket = (httpServer: HttpServer) => {
 
         socket.join(`user:${userId}`)
 
-        socket.on('join-chat',(chatId:string)=>{
+        socket.on('join-chat', async(chatId:string)=>{
             socket.join(`chat:${chatId}`)
+            const oldchat = await Chat.findById(chatId).populate('lastMessage');
+
+             try {
+    if(oldchat?.lastMessage && oldchat?.lastMessage?.sender == userId) return
+    await Message.updateMany(
+      {
+        chat: chatId,
+        readBy: { $ne: userId }, 
+      },
+      { $addToSet: { readBy: userId } }
+    );
+
+    // Optionally, emit an update to the user to refresh the chat list
+    const updatedChat = await Chat.findById(chatId).populate('lastMessage');
+    socket.emit('chat-read-updated', updatedChat);
+
+  } catch (err) {
+    console.error("Error marking messages as read:", err);
+  }
         })
 
         socket.on('leave-chat',(chatId:string)=>{
@@ -63,7 +81,7 @@ export const initailizeSocket = (httpServer: HttpServer) => {
         socket.on('send-message',async(data:{chatId:string,text:string})=>{
             try {
                 const {chatId,text} = data;
-                console.log(chatId,text)
+
                 const chat = await Chat.findOne({
                     _id:chatId,
                     participants:userId!
@@ -80,10 +98,10 @@ export const initailizeSocket = (httpServer: HttpServer) => {
                 chat.lastMessage = message._id
                 chat.lastMessageAt = new Date();
                 await chat.save();
-                await message.populate('sender','name/ avatar'); 
+                await message.populate('sender','name avatar'); 
 
                 // emit to chat room (for users inside the chat)
-                io.to(`chat:${chatId}`).emit('new-message',{message})
+                io.to(`chat:${chatId}`).emit('new-message',message)
 
                 // also emit to paricipants personal room (for chat list view)
                 for (const participantId of chat.participants){

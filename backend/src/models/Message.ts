@@ -3,6 +3,7 @@ import mongoose, { Schema,type Document } from "mongoose";
 export interface IMessage extends Document{
     chat:mongoose.Types.ObjectId,
     sender:mongoose.Types.ObjectId,
+    readBy:mongoose.Types.ObjectId[],
     text:string,
     createdAt:Date,
     updatedAt:Date
@@ -23,7 +24,8 @@ const MessageSchema = new Schema<IMessage>({
         type: String,
         required: true,
         trim: true
-    }
+    },
+    readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User",default:[] }],
 
 },{timestamps:true});
 MessageSchema.index({chat:1,createdAt:1})
