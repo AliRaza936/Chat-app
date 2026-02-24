@@ -10,18 +10,17 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier":"com.anonymous.justchat"
+      "bundleIdentifier": "com.anonymous.justchat"
     },
     "android": {
       "adaptiveIcon": {
-
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#000000"
-        
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.justchat"
+      "package": "com.anonymous.justchat",
+      "jsEngine": "hermes"
     },
     "web": {
       "output": "static",
@@ -30,27 +29,19 @@
     "plugins": [
       "expo-router",
       [
-  "expo-splash-screen",
-  {
-    "image": "./assets/images/logo.png",
-    "resizeMode": "contain",
-    "backgroundColor": "#000000",
-    "imageWidth": 200,
-    "dark": {
-      "image": "./assets/images/logo.png",
-      "backgroundColor": "#000000"
-    }
-  }
-],
-      "expo-font",
-      [
-        "@sentry/react-native/expo",
+        "expo-splash-screen",
         {
-          "url": "https://sentry.io/",
-          "project": "just-chat",
-          "organization": "grocify-0b"
+          "image": "./assets/images/logo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#000000",
+          "imageWidth": 200,
+          "dark": {
+            "image": "./assets/images/logo.png",
+            "backgroundColor": "#000000"
+          }
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -59,7 +50,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "94f8e8f3-81e3-4773-b92d-fb89f59e3355"
+        "projectId": "92eb2aa1-8be6-4d9e-a0fe-57801a15a3b5"
       }
     }
   }

@@ -1,7 +1,7 @@
 import { View, Text, ScrollView, Button, ActivityIndicator, FlatList, Pressable } from 'react-native'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import * as Sentry from '@sentry/react-native';
+
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useChats } from '@/hooks/useChats';
 import { Ionicons } from '@expo/vector-icons';

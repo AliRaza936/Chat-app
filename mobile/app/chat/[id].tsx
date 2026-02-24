@@ -140,13 +140,13 @@ const ChatDetailsScreen = () => {
           </View>
         </View>
         <View className="flex-row items-center  ">
-          <Pressable className="w-9 h-9 rounded-full items-center justify-center mr-2 ">
+          {/* <Pressable className="w-9 h-9 rounded-full items-center justify-center mr-2 ">
             <Ionicons name="call-outline" size={22} color={"#A0A0A5"} />
           </Pressable>
           
           <Pressable className="w-9 h-9 rounded-full items-center justify-center mr-2">
             <Ionicons name="videocam" size={22} color={"#A0A0A5"} />
-          </Pressable>
+          </Pressable> */}
         </View>
       </View>
 

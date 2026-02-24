@@ -2,7 +2,6 @@ import { Stack, useRouter } from "expo-router";
 import "../global.css";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from "expo-status-bar";
-import * as Sentry from '@sentry/react-native';
 import { ActivityIndicator, View } from "react-native";
 import SocketConnection from "@/components/SocketConnection";
 import { useEffect, useState } from "react";
