@@ -78,56 +78,62 @@ export const initailizeSocket = (httpServer: HttpServer) => {
             socket.leave(`chat:${chatId}`)
         })
         //  handle sending message
-      socket.on('send-message', async(data:{chatId:string,text:string})=>{
+        socket.on('send-message', async (data: { chatId: string; text: string }) => {
   try {
-      const { chatId, text } = data;
+    const { chatId, text } = data;
 
-      const chat = await Chat.findOne({
-          _id: chatId,
-          participants: userId!
-      });
-      if(!chat){
-          socket.emit('socket-error',{message:'Chat not found'});
-          return;
-      }
+    const chat = await Chat.findOne({
+      _id: chatId,
+      participants: userId!,
+    });
 
-      const message = await Message.create({
+    if (!chat) {
+      socket.emit('socket-error', { message: 'Chat not found' });
+      return;
+    }
+
+    const message = await Message.create({
+      chat: chatId,
+      sender: userId!,
+      text,
+    });
+
+    chat.lastMessage = message._id;
+    chat.lastMessageAt = new Date();
+    await chat.save();
+    await message.populate('sender', 'name avatar');
+
+    // Emit to chat room
+    io.to(`chat:${chatId}`).emit('new-message', message);
+
+    // Update readBy for users who are currently in the chat room
+    const socketsInChat = await io.in(`chat:${chatId}`).fetchSockets();
+
+    const onlineUserIdsInChat = socketsInChat
+      .map((s) => s.data.userId)
+      .filter((id) => id && id !== userId); // exclude sender
+
+    if (onlineUserIdsInChat.length > 0) {
+      await Message.updateMany(
+        {
           chat: chatId,
-          sender: userId!,
-          text,
-      });
-
-      chat.lastMessage = message._id;
-      chat.lastMessageAt = new Date();
-      await chat.save();
-      await message.populate('sender','name avatar'); 
-
-      // 1️⃣ Get sockets in the chat room
-      const chatRoom = io.sockets.adapter.rooms.get(`chat:${chatId}`) || new Set();
-      const activeUserIds = Array.from(chatRoom);
-
-      // 2️⃣ Update readBy for users currently in the chat room
-      const usersInRoom = chat.participants.filter(p => activeUserIds.includes(onlineUsers.get(p)!));
-      if(usersInRoom.length){
-          await Message.updateOne(
-              { _id: message._id },
-              { $addToSet: { readBy: usersInRoom } }
-          );
-      }
-
-      // 3️⃣ Emit message to chat room (active users see it)
-      io.to(`chat:${chatId}`).emit('new-message', message);
-
-      // 4️⃣ Emit message to personal rooms for chat list updates
-      for(const participantId of chat.participants){
-          io.to(`user:${participantId}`).emit('new-message', message);
-      }
-
+          _id: message._id,
+        },
+        { $addToSet: { readBy: onlineUserIdsInChat } }
+      );
+    }
+  
+    
+    // Also emit to participants personal room (for chat list view)
+    for (const participantId of chat.participants) {
+      io.to(`user:${participantId}`).emit('new-message', message);
+    }
   } catch (error) {
-      console.log(error,'Message not sent to backend')
-      socket.emit('socket-error',{message:'Failed to send message'});
+    console.log(error, 'Message not sent to backend');
+    socket.emit('socket-error', { message: 'Failed to send message' });
   }
 });
+        
         // typing indicator
         socket.on('typing',async(data:{chatId:string,isTyping:boolean})=>{
           const typingPayLoad = {
